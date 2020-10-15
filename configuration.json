@@ -1,5 +1,6 @@
 {
     "api_id": 0,
     "api_hash": "",
-    "output_verbosity": 0
+    "output_verbosity": 0,
+    "bot_token": ""
 }

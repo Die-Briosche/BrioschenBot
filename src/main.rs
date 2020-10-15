@@ -10,20 +10,21 @@ use telegram_client::client::Client;
 use tg_helpers::get_tg_user;
 
 
-fn load_configuration(path: &str) -> (i64, String, i64) {
+fn load_configuration(path: &str) -> (i64, String, String, i64) {
     let raw_conf = fs::read_to_string(path).expect("Could not read configuration file!");
     let conf: serde_json::Value = serde_json::from_str(&raw_conf).expect("Configuration file is malformed");
 
     let api_id = conf["api_id"].as_i64().expect("Configuration file does not contain an API_ID!");
     let api_hash = conf["api_hash"].as_str().expect("Configuration file does not contain an API_HASH!").to_string();
+    let bot_token = conf["bot_token"].as_str().expect("Configuration file does not contain an bot_token!").to_string();
     let output_verbosity = conf["output_verbosity"].as_i64().expect("Configuration file does not contain an output_verbosity!");
 
-    return (api_id.clone(), api_hash.clone(), output_verbosity);
+    return (api_id, api_hash, bot_token, output_verbosity);
 }
 
 
 fn main() {
-    let (_, _, output_verbosity) = load_configuration("configuration.json");
+    let (_, _, _, output_verbosity) = load_configuration("configuration.json");
 
     let _ = Client::set_log_verbosity_level(1);
 
@@ -46,7 +47,7 @@ fn main() {
     listener.on_update_authorization_state(move |(api, update)| {
         let state = update.authorization_state();
         state.on_wait_tdlib_parameters(move |_| {
-            let (api_id, api_hash, _) = load_configuration("configuration.json");
+            let (api_id, api_hash, _, _) = load_configuration("configuration.json");
             let paras = SetTdlibParameters::builder()
                 .parameters(TdlibParameters::builder()
                     .database_directory("tdlib")
@@ -68,7 +69,8 @@ fn main() {
             let _ = api.send(CheckDatabaseEncryptionKey::builder().build());
         });
         state.on_wait_phone_number(|_| {
-            let _ = api.send(CheckAuthenticationBotToken::builder().token("1355835771:AAHY5-Fpi44l0L0xdQ-3oA8JUCplLpCUi5w").build());
+            let (_, _, token, _) = load_configuration("configuration.json");
+            let _ = api.send(CheckAuthenticationBotToken::builder().token(token).build());
         });
         state.on_ready(|_| {
             let mut have_authorization = have_authorization.lock().unwrap();
